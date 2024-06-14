@@ -2,7 +2,8 @@
   "pipelines": [
     {
       "foo": "bar",
-      "bar": "foo"
+      "bar": "foo",
+      "foobar": "baz"
     }
   ],
   "version": "2",

@@ -85,7 +85,7 @@ def _process(arguments: argparse.Namespace, dry_run: bool) -> int:
         return 1
 
     # resolve the full tree first
-    tree = resolve(ctx, doc.tree)
+    tree = resolve(ctx, doc.tree, ctx._path)
 
     # and also for the specific target
     try:
@@ -101,7 +101,7 @@ def _process(arguments: argparse.Namespace, dry_run: bool) -> int:
     # re-resolve the specific target with the specific context and target if
     # applicable
     spec = context_registry.get(kind, CommonContext)(ctx)
-    tree = resolve(spec, tree[f"{PREFIX_TARGET}{kind}.{name}"])
+    tree = resolve(spec, tree[f"{PREFIX_TARGET}{kind}.{name}"], ctx._path)
 
     # and then output by writing to the output
     if not dry_run:

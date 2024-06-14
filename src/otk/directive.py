@@ -56,11 +56,6 @@ from .error import TransformDirectiveTypeError, TransformDirectiveUnknownError
 log = logging.getLogger(__name__)
 
 
-def is_directive(needle: Any) -> bool:
-    """Is a given needle a directive identifier?"""
-    return isinstance(needle, str) and needle.startswith(PREFIX)
-
-
 @tree.must_be(dict)
 def define(ctx: Context, tree: Any) -> Any:
     """Takes an `otk.define` block (which must be a dictionary and registers
@@ -73,19 +68,19 @@ def define(ctx: Context, tree: Any) -> Any:
 
 
 @tree.must_be(str)
-def include(ctx: Context, tree: Any) -> Any:
+def include(ctx: Context, tree: Any, path: pathlib.Path) -> (Any, pathlib.Path):
     """Include a separate file."""
 
     tree = desugar(ctx, tree)
 
-    file = ctx._path / pathlib.Path(tree)
+    file = path / pathlib.Path(tree)
 
     # TODO str'ed for json log, lets add a serializer for posixpath
     # TODO instead
     log.info("otk.include=%s", str(file))
 
     # TODO
-    return yaml.safe_load(file.read_text())
+    return yaml.safe_load(file.read_text()), file.parent
 
 
 def op(ctx: Context, tree: Any, key: str) -> Any:

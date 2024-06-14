@@ -1,4 +1,5 @@
 # Example file to be included in `02-include.yaml`
 foo: "bar"
 bar: "foo"
-otk.include: "example2.yaml"
+two: "2"
+otk.include: "example${two}.yaml"

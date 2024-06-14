@@ -85,7 +85,14 @@ def _process(arguments: argparse.Namespace, dry_run: bool) -> int:
         return 1
 
     # resolve the full tree first
-    tree = resolve(ctx, doc.tree, ctx._path)
+    # XXX: dataclass
+    from dataclasses import dataclass
+    @dataclass
+    class ParserState:
+        path: str
+        in_define: bool
+    state = ParserState(path=ctx._path, in_define=False)
+    tree = resolve(ctx, doc.tree, state)
 
     # and also for the specific target
     try:

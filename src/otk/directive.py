@@ -67,20 +67,6 @@ def define(ctx: Context, tree: Any) -> Any:
     return tree
 
 
-@tree.must_be(str)
-def include(ctx: Context, tree: Any, path: pathlib.Path) -> (Any, pathlib.Path):
-    """Include a separate file."""
-
-    tree = desugar(ctx, tree)
-
-    file = path / pathlib.Path(tree)
-
-    # TODO str'ed for json log, lets add a serializer for posixpath
-    # TODO instead
-    log.info("otk.include=%s", str(file))
-
-    # TODO
-    return yaml.safe_load(file.read_text()), file.parent
 
 
 def op(ctx: Context, tree: Any, key: str) -> Any:

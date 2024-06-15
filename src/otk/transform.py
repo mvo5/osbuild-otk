@@ -19,7 +19,7 @@ from .constant import (
     PREFIX_TARGET,
 )
 from .context import Context, OSBuildContext
-from .directive import define, desugar, include, op
+from .directive import desugar, include, op
 from .external import call
 
 log = logging.getLogger(__name__)
@@ -50,7 +50,8 @@ def resolve_dict(ctx: Context, tree: dict[str, Any], path) -> Any:
         val = tree[key]
         if key.startswith("otk."):
             if key.startswith("otk.define"):
-                tree.update(resolve(ctx, define(ctx, val), path))
+                define(ctx, val, path)
+                del tree[key]
             elif key == "otk.version":
                 pass
             elif key.startswith("otk.target"):
@@ -83,3 +84,14 @@ def resolve_str(ctx, tree: str, path: pathlib.Path) -> Any:
     interpolation."""
     log.debug("resolving str %r", tree)
     return desugar(ctx, tree)
+
+
+#@tree.must_be(dict)
+def define(ctx: Context, tree: Any, path: pathlib.Path) -> Any:
+    """Takes an `otk.define` block (which must be a dictionary and registers
+    everything in it as variables in the context."""
+
+    for key, value in tree.items():
+        ctx.define(key, resolve(ctx, value, path))
+
+    return tree

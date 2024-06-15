@@ -56,17 +56,6 @@ from .error import TransformDirectiveTypeError, TransformDirectiveUnknownError
 log = logging.getLogger(__name__)
 
 
-@tree.must_be(dict)
-def define(ctx: Context, tree: Any) -> Any:
-    """Takes an `otk.define` block (which must be a dictionary and registers
-    everything in it as variables in the context."""
-
-    for key, value in tree.items():
-        ctx.define(key, value)
-
-    return tree
-
-
 @tree.must_be(str)
 def include(ctx: Context, tree: Any, path: pathlib.Path) -> (Any, pathlib.Path):
     """Include a separate file."""

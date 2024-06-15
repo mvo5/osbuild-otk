@@ -3,7 +3,8 @@
     {
       "foo": "bar",
       "bar": "foo",
-      "foobar": "baz"
+      "foobar": "baz",
+      "twotwo": "2"
     }
   ],
   "version": "2",

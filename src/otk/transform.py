@@ -52,11 +52,8 @@ def resolve_dict(ctx: Context, state: ParserState, tree: dict[str, Any]) -> Any:
     for key in list(tree.keys()):
         val = tree[key]
         if is_directive(key):
-            # Define, target, and version are done separately, they allow
-            # sibling elements thus they return the tree with their key set to their
-            # (resolved) value.
             if key.startswith(PREFIX_DEFINE):
-                define(ctx, state, val)
+                state.in_define = True
                 del tree[key]
             elif key == NAME_VERSION:
                 continue
@@ -79,7 +76,10 @@ def resolve_dict(ctx: Context, state: ParserState, tree: dict[str, Any]) -> Any:
                 else:
                     log.error("%r:%r", key, ctx)
 
-        tree[key] = resolve(ctx, state, val)
+        if state.in_define:
+            ctx.define(key, resolve(ctx, state, val))
+        else:
+            tree[key] = resolve(ctx, state, val)
 
     return tree
 

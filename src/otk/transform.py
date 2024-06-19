@@ -10,7 +10,7 @@ keys in the dictionaries."""
 
 import copy
 import logging
-from typing import Any, Type
+from typing import Any
 
 from . import tree
 from .constant import (
@@ -57,7 +57,6 @@ def resolve_dict(ctx: Context, state: ParserState, tree: dict[str, Any]) -> Any:
             # (resolved) value.
             if key.startswith(PREFIX_DEFINE):
                 define(ctx, state, val)
-                print(ctx,state,val)
                 del tree[key]
             elif key == NAME_VERSION:
                 continue
@@ -71,10 +70,12 @@ def resolve_dict(ctx: Context, state: ParserState, tree: dict[str, Any]) -> Any:
                 new_state.path = new_path
                 return resolve(ctx, new_state, new_val)
             elif key.startswith(PREFIX_OP):
-                return resolve(ctx, op(ctx, state, resolve(ctx, state, val), key))
+                new_val = op(ctx, state, key, val)
+                return resolve(ctx, state, new_val)
             elif key.startswith("otk.external."):
                 if isinstance(ctx, OSBuildContext):
-                    return resolve(ctx, state, call(key, resolve(ctx, val)))
+                    new_val = call(key, resolve(ctx, val))
+                    return resolve(ctx, state, new_val)
                 else:
                     log.error("%r:%r", key, ctx)
 

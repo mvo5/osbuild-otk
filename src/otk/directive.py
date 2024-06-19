@@ -66,7 +66,7 @@ def is_directive(needle: Any) -> bool:
 def include(ctx: Context, state: ParserState, rel_path: str) -> (Any, pathlib.Path):
     """Include a separate file."""
 
-    tree = desugar(ctx, state, rel_path)
+    rel_path = desugar(ctx, state, rel_path)
 
     file = state.path.parent / pathlib.Path(rel_path)
 
@@ -82,7 +82,7 @@ def include(ctx: Context, state: ParserState, rel_path: str) -> (Any, pathlib.Pa
         raise IncludeError(f"cannot include {file}") from exc
 
 
-def op(ctx: Context, state: ParserState, tree: Any, key: str) -> Any:
+def op(ctx: Context, state: ParserState, key: str, tree: Any) -> Any:
     """Dispatch the various `otk.op` directives while handling unknown
     operations."""
 
@@ -100,10 +100,10 @@ def op_join(ctx: Context, state: ParserState, tree: dict[str, Any]) -> Any:
     values = tree["values"]
     if not isinstance(values, list):
         raise TransformDirectiveTypeError(
-            "seq join received values of the wrong type, was expecting a list of lists but got %r in %s" %
-            (values,
-             state.path),
+            "seq join received values of the wrong type, was expecting a list of lists but got %r in %s"
+            % (values, state.path),
         )
+
     if all(isinstance(sl, list) for sl in values):
         return _op_seq_join(ctx, state, values)
     elif all(isinstance(sl, dict) for sl in values):
@@ -117,7 +117,8 @@ def _op_seq_join(ctx: Context, state: ParserState, values: List[list]) -> Any:
 
     if not all(isinstance(sl, list) for sl in values):
         raise TransformDirectiveTypeError(
-            "seq join received values of the wrong type, was expecting a list of lists but got %r in %s" % (
+            "seq join received values of the wrong type, was expecting a list of lists but got %r in %s"
+            % (
                 values,
                 state.path,
             )
@@ -132,7 +133,8 @@ def _op_map_join(ctx: Context, state: ParserState, values: List[dict]) -> Any:
 
     if not all(isinstance(sl, dict) for sl in values):
         raise TransformDirectiveTypeError(
-            "map join received values of the wrong type, was expecting a list of dicts but got %r in %s" % (
+            "map join received values of the wrong type, was expecting a list of dicts but got %r in %s"
+            % (
                 values,
                 state.path,
             )
@@ -181,7 +183,8 @@ def desugar(ctx: Context, state: ParserState, tree: str) -> Any:
             # Any other type we do not
             if not isinstance(data, str):
                 raise TransformDirectiveTypeError(
-                    "string sugar resolves to an incorrect type, expected int, float, or str but got %r in %s" % (
+                    "string sugar resolves to an incorrect type, expected int, float, or str but got %r in %s"
+                    % (
                         data,
                         state.path,
                     )

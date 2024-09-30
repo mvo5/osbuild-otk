@@ -1,9 +1,19 @@
 otk.version: "1"
 
+otk.define.defaults:
+  modifications:
+    language: en_US.UTF-8
+    filesystem:
+      filename: "image.raw"
+
+otk.define.user:
+  modifications:
+    ${user.modifications}
+
 otk.define:
   filesystem:
     modifications:
-      filename: "image.raw"
+      ${modifications.filesystem}
   packages:
     build:
       otk.external.osbuild-gen-depsolve-dnf4:
@@ -134,7 +144,7 @@ otk.target.osbuild:
             prefix: ''
         - type: org.osbuild.locale
           options:
-            language: en_US.UTF-8
+            language: ${modifications.language}
         - type: org.osbuild.keymap
           options:
             keymap: us

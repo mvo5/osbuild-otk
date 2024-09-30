@@ -92,7 +92,11 @@ class CommonContext(Context):
                 cur_var_scope[part] = {}
             cur_var_scope = cur_var_scope[part]
         self._maybe_log_var_override(cur_var_scope, parts, value)
-        cur_var_scope[parts[-1]] = value
+        if type(cur_var_scope.get(parts[-1])) is dict and type(value) is dict:
+            # XXX: fine grained overwrite warnings here?
+            cur_var_scope[parts[-1]].update(value)
+        else:
+            cur_var_scope[parts[-1]] = value
 
     def variable(self, name: str) -> Any:
         parts = name.split(".")

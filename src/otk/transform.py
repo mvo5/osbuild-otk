@@ -92,7 +92,7 @@ def resolve_dict(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
             if key.startswith(PREFIX_INCLUDE):
                 del tree[key]  # replace "otk.include" with resolved included data
 
-                included = process_include(ctx, state, pathlib.Path(val))
+                included = process_include(ctx, state, val)
                 if not isinstance(included, dict):
                     if len(tree) > 0:
                         raise ValueError(f"otk.include '{val}' overrides non-empty dict {tree} with '{included}'")
@@ -190,11 +190,21 @@ def process_defines(ctx: Context, state: State, tree: Any) -> None:
             # for any other type, just set the value to the key
             ctx.define(state.define_subkey(key), value)
 
-
-def process_include(ctx: Context, state: State, path: pathlib.Path) -> dict:
+def process_include(ctx: Context, state: State, data: any) -> dict:
     """
     Load a yaml file and send it to resolve() for processing.
     """
+    optional = False
+    if type(data) is str:
+        path = pathlib.Path(data)
+    elif issubclass(type(data), pathlib.Path):
+        path = data
+    elif type(data) is dict:
+        path = pathlib.Path(data["if-exists"])
+        optional = True
+    else:
+        raise ValueError(f"unknown type for incude %s", data)
+    
     # resolve 'path' relative to 'state.path'
     if not path.is_absolute():
         cur_path = state.path.parent
@@ -204,6 +214,8 @@ def process_include(ctx: Context, state: State, path: pathlib.Path) -> dict:
         with path.open(encoding="utf8") as fp:
             data = yaml.safe_load(fp)
     except FileNotFoundError as fnfe:
+        if optional:
+            return {}
         raise FileNotFoundError(f"file {path} referenced from {state.path} was not found") from fnfe
 
     if data is not None:

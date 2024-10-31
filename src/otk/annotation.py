@@ -14,3 +14,17 @@ class OtkList(list):
     def replace(self, new: list):
         self.clear()
         self.extend(new)
+
+
+class OtkStr(str):
+   def __new__(cls, other):
+        val = super().__new__(cls, other)
+        val.otk_src = ""
+        return val
+
+
+class OtkInt(int):
+   def __new__(cls, other):
+        val = super().__new__(cls, other)
+        val.otk_src = ""
+        return val

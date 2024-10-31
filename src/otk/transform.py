@@ -21,7 +21,7 @@ from typing import Any
 import yaml
 
 from . import tree
-from .annotation import OtkDict, OtkList
+from .annotation import OtkDict, OtkList, OtkStr, OtkInt
 from .constant import NAME_VERSION, PREFIX, PREFIX_DEFINE, PREFIX_INCLUDE, PREFIX_OP, PREFIX_TARGET
 from .context import Context, validate_var_name
 from .error import (
@@ -43,6 +43,7 @@ class SafeOtkLoader(yaml.SafeLoader):
         super().__init__(*args, **kwargs)
         self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, self.otk_dict_constructor)
         self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, self.otk_list_constructor)
+        self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, self.otk_scalar_constructor)
 
     def otk_src_from(self, node):
         return f"{node.start_mark.name}:{node.start_mark.line + 1}"
@@ -75,6 +76,11 @@ class SafeOtkLoader(yaml.SafeLoader):
         otk_list.otk_src = self.otk_src_from(node)
         return otk_list
 
+    def otk_scalar_constructor(self, loader, node):
+        data = loader.construct_scalar(node)
+        otk_scalar = OtkStr(data)
+        otk_scalar.otk_src = self.otk_src_from(node)
+        return otk_scalar
 
 def resolve(ctx: Context, state: State, data: Any) -> Any:
     """Resolves a value of any supported type into a new value. Each type has

@@ -24,7 +24,6 @@ def test_annotate(tmp_path):
     tree = process_include(ctx, state, test_yaml_path)
 
     assert "test.yaml:1" in tree.otk_src
-    print(tree)
     assert "test.yaml:3" in tree["otk.target.osbuild"].otk_src
     assert "test.yaml:4" in tree["otk.target.osbuild"]["list"].otk_src
     assert "test.yaml:5" in tree["otk.target.osbuild"]["list"][0].otk_src

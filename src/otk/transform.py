@@ -21,7 +21,7 @@ from typing import Any
 import yaml
 
 from . import tree
-from .annotation import OtkDict
+from .annotation import OtkDict, OtkList
 from .constant import NAME_VERSION, PREFIX, PREFIX_DEFINE, PREFIX_INCLUDE, PREFIX_OP, PREFIX_TARGET
 from .context import Context, validate_var_name
 from .error import (
@@ -42,6 +42,7 @@ class SafeOtkLoader(yaml.SafeLoader):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, self.otk_dict_constructor)
+        self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, self.otk_list_constructor)
 
     def otk_src_from(self, node):
         return f"{node.start_mark.name}:{node.start_mark.line + 1}"
@@ -67,6 +68,12 @@ class SafeOtkLoader(yaml.SafeLoader):
         otk_dict = OtkDict(data)
         otk_dict.otk_src = self.otk_src_from(node)
         return otk_dict
+
+    def otk_list_constructor(self, loader, node):
+        data = loader.construct_sequence(node)
+        otk_list = OtkList(data)
+        otk_list.otk_src = self.otk_src_from(node)
+        return otk_list
 
 
 def resolve(ctx: Context, state: State, data: Any) -> Any:
@@ -161,13 +168,16 @@ def resolve_dict(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
     return tree
 
 
-def resolve_list(ctx: Context, state: State, tree: list[Any]) -> list[Any]:
+def resolve_list(ctx: Context, state: State, tree: OtkList[Any]) -> list[Any]:
     """Resolving a list means applying the resolve function to each element in
     the list."""
 
     log.debug("resolving list %r", tree)
 
-    return [resolve(ctx, state, val) for val in tree]
+    # XXX: think about finding a better way, we need to keep the OtkList
+    # here intact to be able to keep the "otk_src" information
+    tree.replace([resolve(ctx, state, val) for val in tree])
+    return tree
 
 
 def resolve_str(ctx: Context, state: State, tree: str) -> Any:

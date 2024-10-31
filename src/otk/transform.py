@@ -21,6 +21,7 @@ from typing import Any
 import yaml
 
 from . import tree
+from .annotation import OtkDict
 from .constant import NAME_VERSION, PREFIX, PREFIX_DEFINE, PREFIX_INCLUDE, PREFIX_OP, PREFIX_TARGET
 from .context import Context, validate_var_name
 from .error import (
@@ -36,9 +37,18 @@ log = logging.getLogger(__name__)
 
 # from https://gist.github.com/pypt/94d747fe5180851196eb?permalink_comment_id=4653474#gistcomment-4653474
 # pylint: disable=too-many-ancestors
-class SafeUniqueKeyLoader(yaml.SafeLoader):
+class SafeOtkLoader(yaml.SafeLoader):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, self.otk_dict_constructor)
+
+    def otk_src_from(self, node):
+        return f"{node.start_mark.name}:{node.start_mark.line + 1}"
+
     def construct_mapping(self, node, deep=False):
         mapping = set()
+        # check duplicates
         for key_node, _ in node.value:
             if ':merge' in key_node.tag:
                 continue
@@ -52,12 +62,18 @@ class SafeUniqueKeyLoader(yaml.SafeLoader):
             mapping.add(key)
         return super().construct_mapping(node, deep)
 
+    def otk_dict_constructor(self, loader, node):
+        data = loader.construct_mapping(node)
+        otk_dict = OtkDict(data)
+        otk_dict.otk_src = self.otk_src_from(node)
+        return otk_dict
+
 
 def resolve(ctx: Context, state: State, data: Any) -> Any:
     """Resolves a value of any supported type into a new value. Each type has
     its own specific handler to replace the data value."""
 
-    if isinstance(data, dict):
+    if isinstance(data, OtkDict):
         return resolve_dict(ctx, state, data)
     if isinstance(data, list):
         return resolve_list(ctx, state, data)
@@ -226,7 +242,7 @@ def process_include(ctx: Context, state: State, path: pathlib.Path) -> dict:
     log.info("resolving %s", path)
     try:
         with path.open(encoding="utf8") as fp:
-            data = yaml.load(fp, Loader=SafeUniqueKeyLoader)
+            data = yaml.load(fp, Loader=SafeOtkLoader)
     except FileNotFoundError as fnfe:
         cleaned_path = os.fspath(path).removeprefix(
             os.path.commonprefix([path, state.path]))

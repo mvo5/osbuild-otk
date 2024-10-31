@@ -1,30 +1,34 @@
 
-class OtkDict(dict):
+class OtkValueMixin:
+    @property
+    def otk_src(self):
+        return self._otk_src
+
+    @otk_src.setter
+    def otk_src(self, value):
+        self._otk_src = value
+
+
+class OtkDict(OtkValueMixin, dict):
     def __init__(self, other: dict):
-        self.otk_src = ""
         self.update(other)
 
 
-class OtkList(list):
+class OtkList(OtkValueMixin, list):
     def __init__(self, other: list):
-        self.otk_src = ""
         self.extend(other)
-        if isinstance(other, OtkList):
-            self.otk_src = other.otk_src
     def replace(self, new: list):
         self.clear()
         self.extend(new)
 
 
-class OtkStr(str):
+class OtkStr(OtkValueMixin, str):
    def __new__(cls, other):
         val = super().__new__(cls, other)
-        val.otk_src = ""
         return val
 
 
-class OtkInt(int):
+class OtkInt(OtkValueMixin, int):
    def __new__(cls, other):
         val = super().__new__(cls, other)
-        val.otk_src = ""
         return val

@@ -43,10 +43,15 @@ class SafeOtkLoader(yaml.SafeLoader):
         super().__init__(*args, **kwargs)
         self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, self.otk_dict_constructor)
         self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, self.otk_list_constructor)
-        self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, self.otk_scalar_constructor)
+        self.add_constructor('tag:yaml.org,2002:str', self.otk_construct_yaml_str)
+        self.add_constructor('tag:yaml.org,2002:int', self.otk_construct_yaml_int)
 
     def otk_src_from(self, node):
-        return f"{node.start_mark.name}:{node.start_mark.line + 1}"
+        line = node.start_mark.line
+        # XXX: why is this needed :(
+        if isinstance(node, yaml.nodes.ScalarNode):
+            line += 1
+        return f"{node.start_mark.name}:{line}"
 
     def construct_mapping(self, node, deep=False):
         mapping = set()
@@ -76,11 +81,18 @@ class SafeOtkLoader(yaml.SafeLoader):
         otk_list.otk_src = self.otk_src_from(node)
         return otk_list
 
-    def otk_scalar_constructor(self, loader, node):
+    def otk_construct_yaml_str(self, loader, node):
         data = loader.construct_scalar(node)
         otk_scalar = OtkStr(data)
         otk_scalar.otk_src = self.otk_src_from(node)
         return otk_scalar
+
+    def otk_construct_yaml_int(self, loader, node):
+        data = super().construct_yaml_int(node)
+        otk_int = OtkInt(data)
+        otk_int.otk_src = self.otk_src_from(node)
+        return otk_int
+
 
 def resolve(ctx: Context, state: State, data: Any) -> Any:
     """Resolves a value of any supported type into a new value. Each type has

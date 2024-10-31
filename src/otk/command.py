@@ -143,6 +143,12 @@ def parser_create() -> argparse.ArgumentParser:
         default=None,
         help="Target to output, required if more than one target exists in an omnifest.",
     )
+    parser_compile.add_argument(
+        "-p",
+        "--preload",
+        default=None,
+        help="Preload the given otk file before processing the input",
+    )
 
     parser_validate = subparsers.add_parser("validate", help="Validate an omnifest.")
     parser_validate.add_argument(

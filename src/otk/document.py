@@ -30,7 +30,11 @@ class Omnifest:
                 raise OTKError("only target osbuild supported right now")
             self._osbuild_ctx = OSBuildContext(self._ctx)
         state = State()
-        tree = process_include(self._ctx, state, path)
+        if not isinstance(path, list):
+            path = [path]
+        tree = {}
+        for p in path:
+            tree.update(process_include(self._ctx, state, p))
         # XXX: review this code, the idea is to find top-level keys that
         # have no targets but that of course only works if there are
         # no targets in the resolving. this means we are currently forced

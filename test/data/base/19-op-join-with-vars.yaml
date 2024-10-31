@@ -1,0 +1,19 @@
+otk.version: 1
+
+otk.define:
+  default:
+    modifications:
+      language: en_US.UTF-8   
+  
+  user:
+    modifications:
+      language: nl_NL.UTF-8
+
+  modifications:
+    otk.op.join:
+      values:
+        - ${default.modifications}
+        - ${user.modifications}
+
+otk.target.osbuild:
+  lang: ${modifications.language}

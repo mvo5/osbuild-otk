@@ -107,7 +107,7 @@ class CommonContext(Context):
                 value = value[part]
             elif isinstance(value, list):
                 if not part.isnumeric():
-                    raise TransformVariableIndexTypeError(f"part is not numeric but {type(part)}")
+                    raise TransformVariableIndexTypeError(f"part {part} is not numeric but {type(part)} for {value}")
 
                 try:
                     value = value[int(part)]

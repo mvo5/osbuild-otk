@@ -3,6 +3,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
+from .annotation import OtkJSONEncoder
 from .context import CommonContext, OSBuildContext
 from .constant import PREFIX_TARGET
 from .error import ParseError
@@ -25,7 +26,8 @@ class CommonTarget(Target):
         pass
 
     def as_string(self, context: CommonContext, tree: Any, pretty: bool = True) -> str:
-        return json.dumps(tree, indent=2 if pretty else None)
+        return json.dumps(tree, indent=2 if pretty else None,
+                          cls=OtkJSONEncoder)
 
 
 class OSBuildTarget(Target):
@@ -39,4 +41,5 @@ class OSBuildTarget(Target):
         osbuild_tree = tree[PREFIX_TARGET + context.target_requested]
         osbuild_tree["version"] = "2"
 
-        return json.dumps(osbuild_tree, indent=2 if pretty else None)
+        return json.dumps(osbuild_tree, indent=2 if pretty else None,
+                          cls=OtkJSONEncoder)

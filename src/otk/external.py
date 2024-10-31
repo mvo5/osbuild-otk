@@ -9,6 +9,7 @@ import subprocess
 import os
 from typing import Any
 
+from .annotation import OtkDict, otk_deep_convert_from, OtkJSONEncoder
 from .constant import PREFIX_EXTERNAL
 from .error import ExternalFailedError
 from .traversal import State
@@ -23,7 +24,7 @@ def call(state: State, directive: str, tree: Any) -> Any:
     data = json.dumps(
         {
             "tree": tree,
-        }
+        }, cls=OtkJSONEncoder
     )
 
     process = subprocess.run([exe], input=data, encoding="utf8", capture_output=True, check=False)
@@ -33,7 +34,9 @@ def call(state: State, directive: str, tree: Any) -> Any:
         raise ExternalFailedError(msg, state)
 
     res = json.loads(process.stdout)
-    return res["tree"]
+    # we may need a deep convert here if we want otk_src information
+    # on the childreen
+    return otk_deep_convert_from(tree, res["tree"])
 
 
 def exe_from_directive(directive):

@@ -21,7 +21,7 @@ from typing import Any
 import yaml
 
 from . import tree
-from .annotation import OtkDict, OtkList, OtkStr, OtkInt
+from .annotation import OtkBool, OtkDict, OtkList, OtkStr, OtkInt
 from .constant import NAME_VERSION, PREFIX, PREFIX_DEFINE, PREFIX_INCLUDE, PREFIX_OP, PREFIX_TARGET
 from .context import Context, validate_var_name
 from .error import (
@@ -30,84 +30,26 @@ from .error import (
     TransformDirectiveTypeError, TransformDirectiveUnknownError,
 )
 from .external import call
+from .loader import SafeOtkLoader
 from .traversal import State
 
 log = logging.getLogger(__name__)
-
-
-# from https://gist.github.com/pypt/94d747fe5180851196eb?permalink_comment_id=4653474#gistcomment-4653474
-# pylint: disable=too-many-ancestors
-class SafeOtkLoader(yaml.SafeLoader):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, self.otk_dict_constructor)
-        self.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SEQUENCE_TAG, self.otk_list_constructor)
-        self.add_constructor('tag:yaml.org,2002:str', self.otk_construct_yaml_str)
-        self.add_constructor('tag:yaml.org,2002:int', self.otk_construct_yaml_int)
-
-    def otk_src_from(self, node):
-        line = node.start_mark.line
-        # XXX: why is this needed :(
-        if isinstance(node, yaml.nodes.ScalarNode):
-            line += 1
-        return f"{node.start_mark.name}:{line}"
-
-    def construct_mapping(self, node, deep=False):
-        mapping = set()
-        # check duplicates
-        for key_node, _ in node.value:
-            if ':merge' in key_node.tag:
-                continue
-            key = self.construct_object(key_node, deep=deep)
-            if key in mapping:
-                if "otk." in key:
-                    raise ParseDuplicatedYamlKeyError(
-                        f"duplicated {key!r} key found, try using "
-                        f"{key}.<uniq-tag>, e.g. {key}.foo")
-                raise ParseDuplicatedYamlKeyError(f"duplicated {key!r} key found")
-            mapping.add(key)
-        return super().construct_mapping(node, deep)
-
-    def otk_dict_constructor(self, loader, node):
-        data = loader.construct_mapping(node)
-        otk_dict = OtkDict(data)
-        otk_dict.otk_src = self.otk_src_from(node)
-        return otk_dict
-
-    def otk_list_constructor(self, loader, node):
-        data = loader.construct_sequence(node)
-        otk_list = OtkList(data)
-        otk_list.otk_src = self.otk_src_from(node)
-        return otk_list
-
-    def otk_construct_yaml_str(self, loader, node):
-        data = loader.construct_scalar(node)
-        otk_scalar = OtkStr(data)
-        otk_scalar.otk_src = self.otk_src_from(node)
-        return otk_scalar
-
-    def otk_construct_yaml_int(self, loader, node):
-        data = super().construct_yaml_int(node)
-        otk_int = OtkInt(data)
-        otk_int.otk_src = self.otk_src_from(node)
-        return otk_int
 
 
 def resolve(ctx: Context, state: State, data: Any) -> Any:
     """Resolves a value of any supported type into a new value. Each type has
     its own specific handler to replace the data value."""
 
-    if isinstance(data, OtkDict):
+    if isinstance(data, dict):
         return resolve_dict(ctx, state, data)
     if isinstance(data, list):
         return resolve_list(ctx, state, data)
     if isinstance(data, str):
         return resolve_str(ctx, state, data)
-    if isinstance(data, (int, float, bool, type(None))):
+    if isinstance(data, (int, float, OtkBool, type(None))):
         return data
 
-    raise ParseTypeError(f"could not look up {type(data)} in resolvers", state)
+    raise ParseTypeError(f"could not look up {data} of type {type(data)} in resolvers", state)
 
 
 # XXX: look into this
@@ -186,16 +128,13 @@ def resolve_dict(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
     return tree
 
 
-def resolve_list(ctx: Context, state: State, tree: OtkList[Any]) -> list[Any]:
+def resolve_list(ctx: Context, state: State, tree: OtkList[Any]) -> OtkList[Any]:
     """Resolving a list means applying the resolve function to each element in
     the list."""
 
     log.debug("resolving list %r", tree)
 
-    # XXX: think about finding a better way, we need to keep the OtkList
-    # here intact to be able to keep the "otk_src" information
-    tree.replace([resolve(ctx, state, val) for val in tree])
-    return tree
+    return tree.otk_dup([resolve(ctx, state, val) for val in tree])
 
 
 def resolve_str(ctx: Context, state: State, tree: str) -> Any:
@@ -306,14 +245,14 @@ def op_join(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
             values[i] = substitute_vars(ctx, state, val)
 
     if all(isinstance(sl, list) for sl in values):
-        return list(itertools.chain.from_iterable(values))
+        return values.otk_dup(list(itertools.chain.from_iterable(values)))
     if all(isinstance(sl, dict) for sl in values):
         result = {}
         # XXX: this will probably need to become recursive *or* we
         # need something like a "merge_strategy" in "otk.op.join"
         for value in values:
             result.update(value)
-        return result
+        return tree.otk_dup(result)
     raise TransformDirectiveTypeError(f"cannot join {values}", state)
 
 
@@ -360,7 +299,7 @@ def substitute_vars(ctx: Context, state: State, data: str) -> Any:
                     f"expected int, float, or str but got {type(value).__name__}", state)
 
             # Replace all occurences of this name in the str
-            data = re.sub(bracket % re.escape(name), value, data)
+            data = data.otk_dup(re.sub(bracket % re.escape(name), value, data))
             log.debug("substituting %r as substring to %r", name, data)
 
     return data

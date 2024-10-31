@@ -3,6 +3,7 @@ import pathlib
 from copy import deepcopy
 from typing import Any
 
+from .annotation import OtkDict
 from .constant import PREFIX, PREFIX_TARGET, NAME_VERSION
 from .context import CommonContext, OSBuildContext
 from .error import NoTargetsError, ParseError, ParseVersionError, OTKError
@@ -22,7 +23,9 @@ class Omnifest:
     def __init__(self, path: pathlib.Path, target: str = "", *, warn_duplicated_defs: bool = False) -> None:
         self._ctx = CommonContext(target_requested=target, warn_duplicated_defs=warn_duplicated_defs)
         # XXX: this can be removed once we find a way to deal with unset variables
-        self._ctx.define("user.modifications", {})
+        d = OtkDict({})
+        d.otk_src = "hardcoded:1"
+        self._ctx.define("user.modifications", d)
         self._target = target
         # XXX: redo using a type-safe target registry
         if target:

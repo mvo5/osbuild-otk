@@ -1,0 +1,9 @@
+otk.version: 1
+
+otk.define:
+  dict:
+    a: b
+    c: d
+
+otk.target.osbuild:
+  key: a${dict}b

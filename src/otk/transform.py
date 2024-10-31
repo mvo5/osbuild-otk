@@ -161,8 +161,8 @@ def process_defines(ctx: Context, state: State, tree: Any) -> None:
     if tree is None:
         log.warning("empty otk.define in %s", state.path)
         return
-    if tree == {}:
-        ctx.define(state.define_subkey(), {})
+    if len(tree) == 0:
+        ctx.define(state.define_subkey(), OtkDict({}))
         return
 
     # Iterate over a copy of the tree so that we can modify it in-place.
@@ -187,6 +187,11 @@ def process_defines(ctx: Context, state: State, tree: Any) -> None:
             continue
 
         if isinstance(value, dict):
+            # XXX: add something like
+            # ctx.define(state.define_subkey(key), value.otk_dup({}))
+            # here to ensure we have a OtkDict with the right otk_src
+            # from value - the complication is that it needs to merge
+            # values
             new_state = state.copy(subkey_add=key)
             process_defines(ctx, new_state, value)
 
@@ -296,7 +301,8 @@ def substitute_vars(ctx: Context, state: State, data: str) -> Any:
             if not isinstance(value, str):
                 raise TransformDirectiveTypeError(
                     f"string {data!r} resolves to an incorrect type, "
-                    f"expected int, float, or str but got {type(value).__name__}", state)
+                    f"expected int, float, or str but got "
+                    f"{type(value).__name__} at {value.otk_src}", state)
 
             # Replace all occurences of this name in the str
             data = data.otk_dup(re.sub(bracket % re.escape(name), value, data))

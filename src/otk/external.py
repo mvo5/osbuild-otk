@@ -36,7 +36,7 @@ def call(state: State, directive: str, tree: Any) -> Any:
     res = json.loads(process.stdout)
     # we may need a deep convert here if we want otk_src information
     # on the childreen
-    return otk_deep_convert_from(tree, res["tree"])
+    return otk_deep_convert_from(tree.otk_src, res["tree"])
 
 
 def exe_from_directive(directive):

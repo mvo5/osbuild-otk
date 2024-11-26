@@ -1,6 +1,6 @@
 import yaml
 
-from .annotation import OtkDict, OtkList, OtkStr, OtkInt
+from .annotation import OtkNode, OtkDict, OtkList
 from .error import (
     IncludeNotFoundError, OTKError,
     ParseError, ParseTypeError, ParseValueError, ParseDuplicatedYamlKeyError,
@@ -57,12 +57,12 @@ class SafeOtkLoader(yaml.SafeLoader):
 
     def otk_construct_yaml_str(self, loader, node):
         data = loader.construct_scalar(node)
-        otk_scalar = OtkStr(data)
+        otk_scalar = OtkNode(data)
         otk_scalar.otk_src = self.otk_src_from(node)
         return otk_scalar
 
     def otk_construct_yaml_int(self, loader, node):
         data = super().construct_yaml_int(node)
-        otk_int = OtkInt(data)
+        otk_int = OtkNode(data)
         otk_int.otk_src = self.otk_src_from(node)
         return otk_int

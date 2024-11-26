@@ -8,7 +8,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from .annotation import OtkDict
+from .annotation import OtkNode
 from .constant import VALID_VAR_NAME_RE
 from .error import (ParseError,
                     TransformVariableIndexRangeError,
@@ -90,7 +90,7 @@ class CommonContext(Context):
         for i, part in enumerate(parts[:-1]):
             if not isinstance(cur_var_scope.get(part), dict):
                 self._maybe_log_var_override(cur_var_scope, parts[:i+1], {".".join(parts[i+1:]): value})
-                d = OtkDict({})
+                d = OtkNode({})
                 # XXX: make nicer via dataclass
                 # XXX2: when we construct the parent dict
                 if value is not None:
@@ -100,7 +100,7 @@ class CommonContext(Context):
                 cur_var_scope[part] = d
             cur_var_scope = cur_var_scope[part]
         self._maybe_log_var_override(cur_var_scope, parts, value)
-        cur_var_scope[parts[-1]] = value
+        cur_var_scope.value[parts[-1]] = value
 
     def variable(self, name: str) -> Any:
         parts = name.split(".")

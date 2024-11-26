@@ -3,7 +3,7 @@ import pathlib
 from copy import deepcopy
 from typing import Any
 
-from .annotation import OtkDict
+from .annotation import OtkNode
 from .constant import PREFIX, PREFIX_TARGET, NAME_VERSION
 from .context import CommonContext, OSBuildContext
 from .error import NoTargetsError, ParseError, ParseVersionError, OTKError
@@ -23,7 +23,7 @@ class Omnifest:
     def __init__(self, path: pathlib.Path, target: str = "", *, warn_duplicated_defs: bool = False) -> None:
         self._ctx = CommonContext(target_requested=target, warn_duplicated_defs=warn_duplicated_defs)
         # XXX: this can be removed once we find a way to deal with unset variables
-        d = OtkDict({})
+        d = OtkNode({})
         d.otk_src = "hardcoded:1"
         self._ctx.define("user.modifications", d)
         self._target = target
@@ -50,12 +50,12 @@ class Omnifest:
 
         # And that dictionary needs to contain certain keys to indicate this
         # being an Omnifest.
-        if NAME_VERSION not in deserialized_data:
+        if NAME_VERSION not in deserialized_data.value:
             raise ParseVersionError(f"omnifest must contain a key by the name of {NAME_VERSION!r}")
 
         # no toplevel keys without a target or an otk directive
-        targetless_keys = [key for key in deserialized_data
-                           if not key.startswith(PREFIX)]
+        targetless_keys = [key for key in deserialized_data.value
+                           if not key.value.startswith(PREFIX)]
         if len(targetless_keys):
             raise ParseError(f"otk file contains top-level keys {targetless_keys} without a target")
 
@@ -83,6 +83,7 @@ class Omnifest:
 
 def _targets(tree: dict[str, Any]) -> dict[str, Any]:
     return {
-        key.removeprefix(PREFIX_TARGET): val
-        for key, val in tree.items() if key.startswith(PREFIX_TARGET)
+        key.value.removeprefix(PREFIX_TARGET): val
+        for key, val in tree.value.items()
+        if key.value.startswith(PREFIX_TARGET)
     }

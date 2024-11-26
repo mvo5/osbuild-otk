@@ -9,7 +9,7 @@ import subprocess
 import os
 from typing import Any
 
-from .annotation import OtkDict, otk_deep_convert_from, OtkJSONEncoder
+from .annotation import OtkNode, otk_deep_convert_from
 from .constant import PREFIX_EXTERNAL
 from .error import ExternalFailedError
 from .traversal import State
@@ -24,7 +24,7 @@ def call(state: State, directive: str, tree: Any) -> Any:
     data = json.dumps(
         {
             "tree": tree,
-        }, cls=OtkJSONEncoder
+        }
     )
 
     process = subprocess.run([exe], input=data, encoding="utf8", capture_output=True, check=False)

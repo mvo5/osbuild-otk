@@ -17,6 +17,15 @@ otk.target.osbuild:
 """
 
 
+def deep_dump(node):
+    if isinstance(node.value, dict):
+        return {key: deep_dump(value) for key, value in node.value.items()
+                if not value is None}
+    if isinstance(node, list):
+        return [deep_dump(node) for item in node.value]
+    
+    return node
+    
 def test_annotate(tmp_path):
     test_yaml_path = tmp_path / "test.yaml"
     test_yaml_path.write_text(TEST_YAML)
@@ -24,7 +33,8 @@ def test_annotate(tmp_path):
     ctx = CommonContext(target_requested="osbuild")
     state = State()
     tree = process_include(ctx, state, test_yaml_path)
-
+    # XXX: tree is no longer dict[str]Any but dict[Node] so no direct
+    # access possible anymore
     assert "test.yaml:0" in tree.otk_src
     assert "test.yaml:1" in tree["otk.version"].otk_src
     assert "test.yaml:3" in tree["otk.target.osbuild"].otk_src

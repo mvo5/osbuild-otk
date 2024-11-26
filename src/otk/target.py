@@ -3,7 +3,6 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
-from .annotation import OtkJSONEncoder
 from .context import CommonContext, OSBuildContext
 from .constant import PREFIX_TARGET
 from .error import ParseError
@@ -26,20 +25,20 @@ class CommonTarget(Target):
         pass
 
     def as_string(self, context: CommonContext, tree: Any, pretty: bool = True) -> str:
-        return json.dumps(tree, indent=2 if pretty else None,
-                          cls=OtkJSONEncoder)
+        return json.dumps(tree, indent=2 if pretty else None)
+                          
 
 
 class OSBuildTarget(Target):
     def ensure_valid(self, tree: Any) -> None:
-        if "version" in tree:
+        if "version" in tree.value:
             raise ParseError(
                 "First level below a 'target' must not contain 'version'. "
                 "The key 'version' is added by otk internally.")
 
     def as_string(self, context: OSBuildContext, tree: Any, pretty: bool = True) -> str:
-        osbuild_tree = tree[PREFIX_TARGET + context.target_requested]
-        osbuild_tree["version"] = "2"
+        osbuild_tree = tree.value[PREFIX_TARGET + context.target_requested]
+        osbuild_tree.value["version"] = "2"
 
-        return json.dumps(osbuild_tree, indent=2 if pretty else None,
-                          cls=OtkJSONEncoder)
+        return json.dumps(osbuild_tree, indent=2 if pretty else None)
+

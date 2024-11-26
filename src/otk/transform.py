@@ -21,7 +21,7 @@ from typing import Any
 import yaml
 
 from . import tree
-from .annotation import OtkBool, OtkDict, OtkList, OtkStr, OtkInt
+from .annotation import OtkNode, OtkDict, OtkList
 from .constant import NAME_VERSION, PREFIX, PREFIX_DEFINE, PREFIX_INCLUDE, PREFIX_OP, PREFIX_TARGET
 from .context import Context, validate_var_name
 from .error import (
@@ -36,20 +36,20 @@ from .traversal import State
 log = logging.getLogger(__name__)
 
 
-def resolve(ctx: Context, state: State, data: Any) -> Any:
+def resolve(ctx: Context, state: State, node: Any) -> Any:
     """Resolves a value of any supported type into a new value. Each type has
-    its own specific handler to replace the data value."""
+    its own specific handler to replace the node value."""
 
-    if isinstance(data, dict):
-        return resolve_dict(ctx, state, data)
-    if isinstance(data, list):
-        return resolve_list(ctx, state, data)
-    if isinstance(data, str):
-        return resolve_str(ctx, state, data)
-    if isinstance(data, (int, float, OtkBool, type(None))):
-        return data
+    if isinstance(node.value, dict):
+        return resolve_dict(ctx, state, node)
+    if isinstance(node.value, list):
+        return resolve_list(ctx, state, node)
+    if isinstance(node.value, str):
+        return resolve_str(ctx, state, node)
+    if isinstance(node.value, (int, float, bool, type(None))):
+        return node
 
-    raise ParseTypeError(f"could not look up {data} of type {type(data)} in resolvers", state)
+    raise ParseTypeError(f"could not look up {node} of type {type(node.value)} in resolvers", state)
 
 
 # XXX: look into this
@@ -65,7 +65,7 @@ def resolve_dict(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
     - Values under any other key are processed based on their type (see resolve()).
     """
 
-    for key, val in tree.copy().items():
+    for key, val in tree.value.copy().items():
         # Replace any variables in a value immediately before doing anything
         # else, so that variables defined in strings are considered in the
         # processing of all directives.
@@ -124,7 +124,7 @@ def resolve_dict(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
                 # return is fine, no siblings allowed
                 return resolve(ctx, state, call(state, key, resolve(ctx, state, val)))
 
-        tree[key] = resolve(ctx, state, val)
+        tree.value[key] = resolve(ctx, state, val)
     return tree
 
 
@@ -134,7 +134,7 @@ def resolve_list(ctx: Context, state: State, tree: OtkList[Any]) -> OtkList[Any]
 
     log.debug("resolving list %r", tree)
 
-    return tree.otk_dup([resolve(ctx, state, val) for val in tree])
+    return OtkList([resolve(ctx, state, val) for val in tree.value], tree.otk_src)
 
 
 def resolve_str(ctx: Context, state: State, tree: str) -> Any:
@@ -166,7 +166,7 @@ def process_defines(ctx: Context, state: State, tree: Any) -> None:
         return
 
     # Iterate over a copy of the tree so that we can modify it in-place.
-    for key, value in tree.copy().items():
+    for key, value in tree.value.copy().items():
         if key.startswith("otk.define"):
             # nested otk.define: process the nested values directly
             process_defines(ctx, state, value)
@@ -235,8 +235,8 @@ def op(ctx: Context, state: State, tree: Any, key: str) -> Any:
     raise TransformDirectiveUnknownError(f"nonexistent op {key!r}", state)
 
 
-@tree.must_be(dict)
-@tree.must_pass(tree.has_keys(["values"]))
+#@tree.must_be(dict)
+#@tree.must_pass(tree.has_keys(["values"]))
 def op_join(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
     """Join a map/seq."""
 
@@ -261,7 +261,7 @@ def op_join(ctx: Context, state: State, tree: dict[str, Any]) -> Any:
     raise TransformDirectiveTypeError(f"cannot join {values}", state)
 
 
-@tree.must_be(str)
+#@tree.must_be(str)
 def substitute_vars(ctx: Context, state: State, data: str) -> Any:
     """Substitute variables in the `data` string.
 
@@ -279,7 +279,7 @@ def substitute_vars(ctx: Context, state: State, data: str) -> Any:
     pattern = bracket % r"(?P<name>[^}]+)"
     # If there is a single match and its span is the entire haystack then we
     # return its value directly.
-    if m := re.fullmatch(pattern, data):
+    if m := re.fullmatch(pattern, data.value):
         validate_var_name(m.group("name"))
         try:
             var = ctx.variable(m.group("name"))
@@ -287,7 +287,7 @@ def substitute_vars(ctx: Context, state: State, data: str) -> Any:
             raise exc.__class__(str(exc), state)
         return var
 
-    if matches := re.finditer(pattern, data):
+    if matches := re.finditer(pattern, data.value):
         for m in matches:
             name = m.group("name")
             validate_var_name(m.group("name"))

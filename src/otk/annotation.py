@@ -4,7 +4,13 @@ from json import JSONEncoder
 from typing import Any
 
 
-class OtkValueMixin:
+class OtkNode:
+    def __init__(self, value, otk_src=None):
+        self.value = value
+        if otk_src:
+            # XXX: add a way to merge
+            self._otk_src = otk_src
+    
     @property
     def otk_src(self):
         return self._otk_src
@@ -13,66 +19,50 @@ class OtkValueMixin:
     def otk_src(self, value):
         self._otk_src = value
 
+    # needed so that we can compare things in dicts
+    def __eq__(self, other):
+        if isinstance(other, OtkNode):
+            return self.value == other.value
+        return self.value == other
 
-class OtkDict(OtkValueMixin, dict):
-    def __init__(self, other: dict):
-        self.update(other)
-
-    # XXX: not a good nameq
-    def otk_dup(self, new: dict):
-        new = OtkDict(new)
-        new.otk_src = self.otk_src
-        return new
-
-
-class OtkList(OtkValueMixin, list):
-    def __init__(self, other: list):
-        self.extend(other)
-
-    # XXX: not a good name
-    def otk_dup(self, new: list):
-        new = OtkList(new)
-        new.otk_src = self.otk_src
-        return new
+    # needed so that we can put things into dicts
+    def __hash__(self):
+        return hash(self.value)
 
 
-class OtkStr(OtkValueMixin, str):
-    def __new__(cls, other):
-        val = super().__new__(cls, other)
-        return val
-
-    # XXX: not a good name
-    def otk_dup(self, new):
-        # str are immutable
-        new = OtkStr(new)
-        new.otk_src = self.otk_src
-        return new
+# needed so that yaml loading "feels" natural
+class OtkDict(OtkNode):
+    def __getitem__(self, item):
+        return self.value.__getitem__(item)
 
 
-class OtkInt(OtkValueMixin, int):
-    def __new__(cls, other):
-        val = super().__new__(cls, other)
-        return val
+# needed so that yaml loading "feels" natural
+class OtkList(OtkNode):
+    def __getitem__(self, item):
+        return self.value.__getitem__(item)
 
 
-# bool can't be subclassed so we need to workaround
-class OtkBool(OtkValueMixin):
-    def __init__(self, other) -> None:
-        self._bool = other
-
-
-# this is only needed to support OtkBool
-class OtkJSONEncoder(JSONEncoder):
-    def default(self, o):
-        if isinstance(o, OtkBool):
-            return o._bool
+def otk_deep_convert(data):
+    ret = data
+    if isinstance(data, OtkNode):
+        return ret
+    if isinstance(data, dict):
+        ret = OtkDict({
+            key: otk_deep_convert(value) for key, value in data.items()
+        })
+    elif isinstance(data, list):
+        ret = OtkList([otk_deep_convert(item) for item in data])
+    elif isinstance(data, str):
+        ret = OtkStr(data)
+    elif isinstance(data, int):
+        ret = OtkInt(data)
 
 
 # this is needed for the external data which does not come in via
 # the yaml loader
-def otk_deep_convert_from(origin: OtkValueMixin, data: Any):
+def otk_deep_convert_from(origin: OtkNode, data: Any):
     ret = data
-    if isinstance(data, OtkValueMixin):
+    if isinstance(data, OtkNode):
         return ret
     if isinstance(data, dict):
         ret = OtkDict({
